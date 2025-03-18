@@ -122,6 +122,31 @@ def test_gemm_backward_w() -> None:
                   f'{(m * k + k * n + m * n * 2) / 1e9 / t:4.0f} GB/s')
     print()
 
+def test_m_grouped_gemm_dw_contiguous()->None:
+    print('Testing grouped contiguous GEMM:')
+
+    for num_groups, m, k, n in ((4, 8192, 7168, 4096), (4, 8192, 2048, 7168), (8, 4096, 7168, 4096), (8, 4096, 2048, 7168)):
+        # TODO: make a stronger test
+        x_fp8, y_fp8, out, ref_out = construct_grouped(num_groups, m, k, n, is_masked=False)
+        m_indices = torch.arange(0, num_groups, device='cuda', dtype=torch.int)
+        m_indices = m_indices.unsqueeze(-1).expand(num_groups, m).contiguous().view(-1)
+        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
+        diff = calc_diff(out, ref_out)
+        assert diff < 0.001, f'm={m * num_groups}, {k=}, {n=}, {diff:.5f}'
+
+        # noinspection PyShadowingNames
+        def test_func():
+            # Construct new tensors every time to avoid L2 cache acceleration
+            x_fp8, y_fp8, out, ref_out = construct_grouped(num_groups, m, k, n, is_masked=False)
+            m_indices = torch.arange(0, num_groups, device='cuda', dtype=torch.int)
+            m_indices = m_indices.unsqueeze(-1).expand(num_groups, m).contiguous().view(-1)
+            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
+
+        t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
+        print(f' > Performance ({num_groups=}, m_per_group={m:4}, n={n:4}, k={k:4}): {t * 1e6:4.0f} us | '
+              f'throughput: {2 * num_groups * m * n * k / t / 1e12:4.0f} TFLOPS, '
+              f'{(num_groups * (m * k + k * n + m * n * 2)) / 1e9 / t:4.0f} GB/s')
+    print()
 
 def test_m_grouped_gemm_contiguous() -> None:
     print('Testing grouped contiguous GEMM:')
@@ -195,4 +220,5 @@ if __name__ == '__main__':
     test_gemm_backward_w()
     test_gemm()
     test_m_grouped_gemm_contiguous()
+    test_m_grouped_gemm_dw_contiguous()
     test_m_grouped_gemm_masked()

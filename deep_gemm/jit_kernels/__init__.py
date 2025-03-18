@@ -1,5 +1,6 @@
 from .gemm import gemm_fp8_fp8_bf16_nt
 from .gemm_bw import gemm_fp8_fp8_bf16_bw_nt
+from .m_grouped_gemm_dw import m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous
 from .m_grouped_gemm import (
     m_grouped_gemm_fp8_fp8_bf16_nt_contiguous,
     m_grouped_gemm_fp8_fp8_bf16_nt_masked
