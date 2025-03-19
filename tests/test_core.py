@@ -79,6 +79,11 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
             x_fp8[0].view(-1, k),
             per_token_cast_to_fp8(x.view(-1, k))[1] 
         )
+        
+        y_fp8 = (
+            y_fp8[0].view(-1, k),
+            per_token_cast_to_fp8(y.view(-1, k))[1]
+        )
         out = out.view(-1, n)
         ref_out = ref_out.view(-1, n)
 
