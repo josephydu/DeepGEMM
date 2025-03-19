@@ -26,7 +26,7 @@ auto tma_b_desc = GemmType::make_2d_tma_b_desc(rhs);
 auto tma_scales_a_desc = GemmType::make_2d_tma_scales_a_desc(lhs_scales, m);
 auto tma_scales_b_desc = GemmType::make_2d_tma_scales_b_desc(rhs_scales, m);
 auto tma_d_desc = GemmType::make_2d_tma_d_desc(out, m);
-GemmType::run(out, rhs_scales, nullptr,
+GemmType::run(out, rhs_scales, grouped_layout,
               m,
               tma_a_desc, tma_b_desc, tma_scales_a_desc, tma_scales_b_desc, tma_d_desc,
               stream, num_sms, smem_size);
@@ -90,6 +90,7 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
     args = (lhs, lhs_scales, rhs, rhs_scales, out,
             m_indices, m, num_groups,
             torch.cuda.current_stream(), num_sms, smem_size)
+    
     print("lhs shape", lhs.shape)
     print("lhs_scales shape", lhs_scales.shape)
     print("rhs shape", rhs.shape)
