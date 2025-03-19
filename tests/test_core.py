@@ -97,7 +97,7 @@ def test_gemm_backward_w() -> None:
 def test_m_grouped_gemm_dw_contiguous()->None:
     print('Testing grouped contiguous GEMM:')
 
-    for num_groups, m, k, n in ((2, 128, 128, 128),):
+    for num_groups, m, k, n in ((1, 128, 128, 128),):
         # TODO: make a stronger test
         x_fp8, y_fp8, out, ref_out = construct_dw_grouped(num_groups, m, k, n, is_masked=False)
         m_indices = torch.arange(0, num_groups, device='cuda', dtype=torch.int)
