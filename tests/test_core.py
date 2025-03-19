@@ -98,11 +98,12 @@ def test_m_grouped_gemm_dw_contiguous()->None:
     for num_groups, m, k, n in ((2, 8192, 7168, 4096),):
         # TODO: make a stronger test
         x_fp8, y_fp8, out, ref_out = construct_dw_grouped(num_groups, m, k, n, is_masked=False)
-        m_indices = torch.repeat_interleave(
+        m_indices = torch.arange(0, num_groups, device='cuda', dtype=torch.int)
+        m_indices = m_indices.unsqueeze(-1).expand(num_groups, m).contiguous().view(-1)
+        print(m_indices.equal(torch.repeat_interleave(
             torch.arange(num_groups, device='cuda', dtype=torch.int32),
             m * torch.ones(num_groups, dtype=torch.int32, device='cuda')
-        )
-        print(m_indices)
+        )))
         deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={m * num_groups}, {k=}, {n=}, {diff:.5f}'
@@ -111,11 +112,8 @@ def test_m_grouped_gemm_dw_contiguous()->None:
         def test_func():
             # Construct new tensors every time to avoid L2 cache acceleration
             x_fp8, y_fp8, out, ref_out = construct_dw_grouped(num_groups, m, k, n, is_masked=False)
-            m_indices = torch.repeat_interleave(
-                torch.arange(num_groups, device='cuda', dtype=torch.int32),
-                m * torch.ones(num_groups, dtype=torch.int32, device='cuda')
-            )
-            print(m_indices)
+            m_indices = torch.arange(0, num_groups, device='cuda', dtype=torch.int)
+            m_indices = m_indices.unsqueeze(-1).expand(num_groups, m).contiguous().view(-1)
             deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
 
         t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
