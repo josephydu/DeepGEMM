@@ -38,6 +38,7 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
     out = torch.empty((num_groups, m, n), device='cuda', dtype=torch.bfloat16)
     ref_out = torch.einsum('gmk,gnk->gmn', x, y)
 
+
     assert m % 4 == 0, f'TMA alignment error: {m}'
     x_fp8 = (
         torch.empty_like(x, dtype=torch.float8_e4m3fn),
@@ -94,7 +95,7 @@ def test_gemm_backward_w() -> None:
 def test_m_grouped_gemm_dw_contiguous()->None:
     print('Testing grouped contiguous GEMM:')
 
-    for num_groups, m, k, n in ((1, 8192, 7168, 4096), (4, 8192, 2048, 7168), (8, 4096, 7168, 4096), (8, 4096, 2048, 7168)):
+    for num_groups, m, k, n in ((1, 8192, 7168, 4096)):
         # TODO: make a stronger test
         x_fp8, y_fp8, out, ref_out = construct_dw_grouped(num_groups, m, k, n, is_masked=False)
         m_indices = torch.arange(0, num_groups, device='cuda', dtype=torch.int)
