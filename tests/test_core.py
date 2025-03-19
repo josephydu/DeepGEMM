@@ -102,6 +102,7 @@ def test_m_grouped_gemm_dw_contiguous()->None:
             torch.arange(num_groups, device='cuda', dtype=torch.int32),
             m * torch.ones(num_groups, dtype=torch.int32, device='cuda')
         )
+        print(m_indices)
         deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={m * num_groups}, {k=}, {n=}, {diff:.5f}'
