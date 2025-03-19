@@ -75,13 +75,9 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
     assert out.is_contiguous() and m_indices.is_contiguous()
 
     # LHS scales must be transposed for TMA load, but not for RHS scales
-    # lhs_scales = get_col_major_tma_aligned_tensor(lhs_scales)
-    # rhs_scales = get_col_major_tma_aligned_tensor(rhs_scales)
-    
-    
-    lhs_scales = get_col_major_tma_aligned_tensor(lhs_scales.view(num_groups, m, -1))
-    lhs_scales = lhs_scales.view(-1, lhs_scales.shape[-1])
+    lhs_scales = get_col_major_tma_aligned_tensor(lhs_scales)
     rhs_scales = get_col_major_tma_aligned_tensor(rhs_scales)
+
 
     # Do nothing if `m` is zero
     if m == 0:
