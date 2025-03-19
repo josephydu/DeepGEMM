@@ -155,11 +155,11 @@ def gemm_fp8_fp8_bf16_bw_nt(
     assert lhs.is_contiguous() and rhs.is_contiguous() and out.is_contiguous()
 
 
-    print("lhs shape", lhs.shape)
-    print("lhs_scales shape", lhs_scales.shape)
-    print("rhs shape", rhs.shape)
-    print("rhs_scales shape", rhs_scales.shape)
-    print("out shape", out.shape)
+    # print("lhs shape", lhs.shape)
+    # print("lhs_scales shape", lhs_scales.shape)
+    # print("rhs shape", rhs.shape)
+    # print("rhs_scales shape", rhs_scales.shape)
+    # print("out shape", out.shape)
 
     # LHS scales must be transposed for TMA load, but not for RHS scales
     # NOTES: `get_tma_aligned_lhs_scales` may launch a kernel if not processed by previous kernels
