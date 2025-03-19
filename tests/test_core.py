@@ -112,6 +112,7 @@ def test_m_grouped_gemm_dw_contiguous()->None:
                 torch.arange(num_groups, device='cuda', dtype=torch.int32),
                 m * torch.ones(num_groups, dtype=torch.int32, device='cuda')
             )
+            print(m_indices)
             deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
 
         t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
