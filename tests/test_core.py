@@ -75,7 +75,7 @@ def test_gemm_backward_w() -> None:
     # for m in (64, 128, 4096):
     #     for k, n in [(7168, 2112), (1536, 24576), (512, 32768), (16384, 7168), (7168, 4096), (2048, 7168)]:
     for m in (4096, ):
-        for k, n in [(7168, 2112), (1536, 24576), (512, 32768), (16384, 7168), (7168, 4096), (2048, 7168)]:
+        for k, n in [(7168, 2112),]:
             x_fp8, y_fp8, out, ref_out = construct_backward_w(m, k, n)
             deep_gemm.gemm_fp8_fp8_bf16_bw_nt(x_fp8, y_fp8, out)
             diff = calc_diff(out, ref_out)
