@@ -1,12 +1,12 @@
 import torch
 from typing import Tuple
 
-from .gemm import get_best_configs
+from .gemm_bw import get_best_configs
 from .tuner import jit_tuner
 from .utils import get_col_major_tma_aligned_tensor, get_num_sms
 
 # C++ code templates
-includes = ('"deep_gemm/fp8_gemm.cuh"', )
+includes = ('"deep_gemm/fp8_gemm_backward_w.cuh"', )
 template = """
 using namespace deep_gemm;
 
