@@ -17,17 +17,18 @@ constexpr auto BLOCK_N = {BLOCK_N};
 constexpr auto kNumStages = {NUM_STAGES};
 constexpr auto kNumTMAMulticast = {NUM_TMA_MULTICAST};
 
-// Make a templated grouped GEMM
-using GemmType = Gemm<N, K, BLOCK_M, BLOCK_N, 128, {NUM_GROUPS}, kNumStages, kNumTMAMulticast, GemmType::{GEMM_TYPE}>;
+// Make a templated GEMM
+using GemmType = GemmBW<N, K, BLOCK_M, BLOCK_N, 128, 1, kNumStages, kNumTMAMulticast, GemmType::Normal>;
 
 // Launch kernel
 auto tma_a_desc = GemmType::make_2d_tma_a_desc(lhs, m);
 auto tma_b_desc = GemmType::make_2d_tma_b_desc(rhs);
 auto tma_scales_a_desc = GemmType::make_2d_tma_scales_a_desc(lhs_scales, m);
+auto tma_scales_b_desc = GemmType::make_2d_tma_scales_b_desc(rhs_scales, m);
 auto tma_d_desc = GemmType::make_2d_tma_d_desc(out, m);
-GemmType::run(out, rhs_scales, grouped_layout,
+GemmType::run(out, rhs_scales, nullptr,
               m,
-              tma_a_desc, tma_b_desc, tma_scales_a_desc, tma_d_desc,
+              tma_a_desc, tma_b_desc, tma_scales_a_desc, tma_scales_b_desc, tma_d_desc,
               stream, num_sms, smem_size);
 """
 
@@ -75,7 +76,7 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
 
     # LHS scales must be transposed for TMA load, but not for RHS scales
     lhs_scales = get_col_major_tma_aligned_tensor(lhs_scales)
-    assert rhs_scales.is_contiguous()
+    rhs_scales = get_col_major_tma_aligned_tensor(rhs_scales)
 
     # Do nothing if `m` is zero
     if m == 0:
