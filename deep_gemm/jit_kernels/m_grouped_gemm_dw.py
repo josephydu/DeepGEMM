@@ -57,11 +57,11 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
             Values of `m_indices` in every-m-alignment-block must also be the same.
     """
     print("hello")
-    print(num_groups)
     lhs, lhs_scales = lhs
     rhs, rhs_scales = rhs
     m, k = lhs.shape
     num_groups, n, k_ = rhs.shape
+    print(num_groups)
     m_, n_ = out.shape
     m__ = m_indices.numel()
 
