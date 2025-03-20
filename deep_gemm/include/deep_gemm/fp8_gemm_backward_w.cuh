@@ -413,7 +413,7 @@ public:
         constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
 
         return make_2d_tma_desc(global_address, Layout::ColMajor,
-            shape_n * kNumGroups,  
+            shape_n,  
             ceil_div(SHAPE_K, BLOCK_K) * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), 
             BLOCK_N, 1,
             CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
