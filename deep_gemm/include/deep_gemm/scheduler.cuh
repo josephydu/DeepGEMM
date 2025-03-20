@@ -72,6 +72,7 @@ struct Scheduler {
             return curr_group_idx * shape_dim + block_idx * block_size;
         }
     }
+    
 
 
 
