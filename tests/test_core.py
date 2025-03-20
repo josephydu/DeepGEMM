@@ -107,9 +107,13 @@ def test_m_grouped_gemm_dw_contiguous()->None:
         diff = calc_diff(out[0:m], ref_out[0:m])
         if diff > 0.001:
             print(f'm1 fail, m1={m * num_groups}, {k=}, {n=}, {diff:.5f}')
+        else:
+            print(f'm1 pass')
         diff = calc_diff(out[m:2 * m], ref_out[m:2 * m])
         if diff > 0.001:
             print(f'm2 fail, m1={m * num_groups}, {k=}, {n=}, {diff:.5f}')
+        else:
+            print(f'm2 pass')
         # diff = calc_diff(out, ref_out)
 
         # noinspection PyShadowingNames
