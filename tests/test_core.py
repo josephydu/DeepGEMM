@@ -70,6 +70,43 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
     return x_fp8, y_fp8, out, ref_out
     
 
+def construct_dw_grouped_varlen(group_sizes, k: int, n: int) -> Tuple:
+    """构造可变长度分组的测试数据"""
+    num_groups = len(group_sizes)
+    # 生成随机数据，每个组的m维度不同
+    x = torch.randn((sum(group_sizes), k), device='cuda', dtype=torch.bfloat16)
+    y = torch.randn((num_groups, n, k), device='cuda', dtype=torch.bfloat16)
+    out = torch.empty((sum(group_sizes), n), device='cuda', dtype=torch.bfloat16)
+    
+    # 生成分组索引
+    m_indices = []
+    for i, size in enumerate(group_sizes):
+        m_indices.extend([i] * size)
+    m_indices = torch.tensor(m_indices, device='cuda', dtype=torch.int32)
+    
+    # 转换FP8格式
+    x_fp8, x_scales = per_token_cast_to_fp8(x)
+    y_fp8, y_scales = per_token_cast_to_fp8(y.view(-1, k))
+    
+    # 内存对齐处理
+    x_scales = get_col_major_tma_aligned_tensor(x_scales)
+    y_scales = get_col_major_tma_aligned_tensor(y_scales.view(num_groups, n, -1))
+    
+    return (x_fp8, x_scales), (y_fp8.view(num_groups, n, k), y_scales), out, m_indices
+def test_varlen_grouped_gemm():
+    group_sizes = [1024, 1536, 2048]
+    x_fp8, y_fp8, out, m_indices = construct_dw_grouped_varlen(group_sizes, k=7168, n=4096)
+    
+    deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(
+        x_fp8, y_fp8, out, m_indices)
+    
+    ref_out = torch.cat([
+        x_fp8[0][:1024] @ y_fp8[0][0].t(),
+        x_fp8[0][1024:2560] @ y_fp8[0][1].t(),
+        x_fp8[0][2560:] @ y_fp8[0][2].t()
+    ])
+    assert calc_diff(out, ref_out) < 0.001
+
 
 
 def test_gemm_backward_w() -> None:
