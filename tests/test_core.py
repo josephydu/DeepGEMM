@@ -111,12 +111,7 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
         x_fp8 = per_token_cast_to_fp8(x)
         y_fp8 = per_token_cast_to_fp8(y)
 
-        m_indices = []
-        current = 0
-        for m in m_list:
-            m_indices.append[[current] * m]
-            current += 1
-        m_indices = torch.tensor(m_indices, device='cuda', dtype=torch.int)
+        m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(m_list)])
         deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'varlen grouped gemm failed with {diff:.5f}'
