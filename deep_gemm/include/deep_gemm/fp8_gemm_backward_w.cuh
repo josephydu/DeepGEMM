@@ -412,9 +412,15 @@ public:
         constexpr uint32_t kAlignment = 16 / sizeof(T);
         constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
 
-        return make_2d_tma_desc(global_address, Layout::ColMajor,
-                                shape_n, ceil_div(SHAPE_K, BLOCK_K) * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), BLOCK_N, 1,
-                                CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
+        return make_2d_tma_desc(
+            global_address, 
+            Layout::ColMajor,
+            shape_n * (kGemmType != GemmType::Normal ? kNumGroups : 1),  // 每个group的scale_b在内存中连续存放
+            ceil_div(SHAPE_K, BLOCK_K), 
+            BLOCK_N, 
+            1,
+            CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE
+        );
     }
 
     template <typename T>
