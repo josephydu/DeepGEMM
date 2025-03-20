@@ -65,6 +65,7 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
         )
         
         out = out.view(-1, n)
+        
         ref_out = ref_out.view(-1, n)
 
     x_fp8 = (x_fp8[0], get_col_major_tma_aligned_tensor(x_fp8[1]))
