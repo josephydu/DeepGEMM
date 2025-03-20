@@ -177,10 +177,14 @@ fp8_gemm_bw_kernel(__nv_bfloat16* gmem_d, float* scales_b, int* grouped_layout,
                                  smem_b[s], 
                                  k_idx, 
                                  scheduler.get_global_idx<false>(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx));
+                        // 根据grouped_layout获取当前block所属的group
+                        const int group_id = __ldg(scheduler.grouped_layout + m_block_idx);
                         tma_copy(&tensor_map_scales_b, reinterpret_cast<uint64_t*>(&full_barrier),
                                  smem_scales_b[s], 
-                                 scheduler.get_global_idx<false>(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx),
-                                 scheduler.get_global_idx(SHAPE_K_SCALES, 1, k_idx / BLOCK_K,m_block_idx));
+                                 // 计算全局偏移：group_id * 每个group的列数 + n_block_idx
+                                 group_id * ceil_div(SHAPE_N, BLOCK_N) + n_block_idx,
+                                 // K维索引保持不变
+                                 scheduler.get_global_idx(SHAPE_K_SCALES, 1, k_idx / BLOCK_K, m_block_idx));
                         full_barrier.arrive_and_expect_tx(SMEM_A_SIZE_PER_STAGE + SMEM_B_SIZE_PER_STAGE + SMEM_SCALES_A_SIZE_PER_STAGE + SMEM_SCALES_B_SIZE_PER_STAGE);
                     }
 
@@ -416,9 +420,10 @@ public:
         constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
 
         return make_2d_tma_desc(global_address, Layout::ColMajor,
-            shape_n * kNumGroups, 
-                                ceil_div(SHAPE_K, BLOCK_K) * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), BLOCK_N, 1,
-                                CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
+            shape_n,  // 每个group单独一行
+            ceil_div(SHAPE_K, BLOCK_K) * kNumGroups,  // 总列数包含所有group
+            BLOCK_N, 1,
+            CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
     }
 
 
