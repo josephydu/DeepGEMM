@@ -96,8 +96,43 @@ def test_gemm_backward_w() -> None:
                   f'{(m * k + k * n + m * n * 2) / 1e9 / t:4.0f} GB/s')
     print()
 
+def test_m_grouped_gemm_dw_varlen_contiguous()->None:
+    print('Testing grouped variable length contiguous GEMM:')
+    configs = [
+        (2, [4096, 8192], 7168, 4096),  
+        (3, [2048, 3072, 4096], 2048, 7168),  
+        (4, [1024, 2048, 3072, 4096], 512, 32768)  
+    ]
+    for num_groups, m_list, k, n in configs:
+        x = torch.cat([torch.randn((m, k), device='cuda', dtype=torch.bfloat16) for m in m_list], dim=0)
+        y = torch.randn((sum(m_list), k), device='cuda', dtype=torch.bfloat16)
+        out = torch.empty((sum(m_list), n), device='cuda', dtype=torch.bfloat16)
+        ref_out = x @ y.t()
+        x_fp8 = per_token_cast_to_fp8(x)
+        y_fp8 = per_token_cast_to_fp8(y)
+
+        m_indices = []
+        current = 0
+        for m in m_list:
+            m_indices.append[[current] * m]
+            current += 1
+        m_indices = torch.tensor(m_indices, device='cuda', dtype=torch.int)
+        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
+        diff = calc_diff(out, ref_out)
+        assert diff < 0.001, f'varlen grouped gemm failed with {diff:.5f}'
+        # 性能测试
+        def test_func():
+            x_fp8, y_fp8 = per_token_cast_to_fp8(x), per_token_cast_to_fp8(y)
+            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
+            
+        t = bench_kineto(test_func, 'fp8_gemm_varlen', suppress_kineto_output=True)
+        total_flops = 2 * sum(m * k * n for m in m_list)
+        print(f' > Performance ({num_groups} groups, m={m_list}, n={n}, k={k}): {t * 1e6:.0f} us | '
+              f'Throughput: {total_flops / t / 1e12:.1f} TFLOPS')
+    print()
+
 def test_m_grouped_gemm_dw_contiguous()->None:
-    print('Testing grouped contiguous GEMM:')
+    print('Testing grouped dw contiguous GEMM:')
 
     for num_groups, m, k, n in ((4, 8192, 7168, 4096), (4, 8192, 2048, 7168), (8, 4096, 7168, 4096), (8, 4096, 2048, 7168)):
     # for num_groups, m, k, n in ((2, 128, 128, 128),):
@@ -147,5 +182,6 @@ if __name__ == '__main__':
     print('Library path:')
     print(f' > {deep_gemm.__path__}\n')
 
+    test_m_grouped_gemm_dw_varlen_contiguous()
     test_m_grouped_gemm_dw_contiguous()
     test_gemm_backward_w()
