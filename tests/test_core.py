@@ -80,8 +80,6 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
         x_part = x[start_idx:start_idx + m]
         y_part = y[i]
         gemm = x_part @ y_part.t()
-        # print('ref_out.shape', ref_out.shape)
-        # print('gemm.shape', gemm.shape)
         ref_out[start_idx:start_idx + m] = gemm
         start_idx += m
         
@@ -154,23 +152,16 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
         assert diff < 0.001, f'm={sum(m_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
         torch.cuda.synchronize()
 
-        
-        
+        def test_func():
+            # Construct new tensors every time to avoid L2 cache acceleration
+            x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked=False)
+            m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(m_list)])
+            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
 
-
-        # x_fp8 = (
-        #     torch.empty_like(x, dtype=torch.float8_e4m3fn),
-        #     torch.empty((num_groups, m, k // 128), device='cuda', dtype=torch.float)
-        # )
-        # y_fp8 = (
-        #     torch.empty_like(y, dtype=torch.float8_e4m3fn),
-        #     torch.empty((num_groups, n, k // 128), device='cuda', dtype=torch.float) # NOTE: per-token
-        # )
-        
-        # for i in range(num_groups):
-        #     x_fp8[0][i], x_fp8[1][i] = per_token_cast_to_fp8(x[i])  
-        #     y_fp8[0][i], y_fp8[1][i] = per_token_cast_to_fp8(y[i])  # NOTE: per-token
-    
+        t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
+        print(f' > Performance ({num_groups=}, m_list_per_group={m_list}, n={n:4}, k={k:4}): {t * 1e6:4.0f} us | '
+              f'throughput: {2 * sum(m_list) * n * k / t / 1e12:4.0f} TFLOPS, '
+              f'{(sum(m_list) * (k + k * n + n * 2)) / 1e9 / t:4.0f} GB/s')
     print()
     
 
@@ -188,6 +179,7 @@ def test_m_grouped_gemm_dw_contiguous()->None:
         deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={m * num_groups}, {k=}, {n=}, {diff:.5f}'
+        torch.cuda.synchronize()
         
         # if diff > 0.001:
         #     print(f'========>m2 fail, m1={m * num_groups}, {k=}, {n=}, {diff:.5f}')
@@ -200,8 +192,6 @@ def test_m_grouped_gemm_dw_contiguous()->None:
         #     print(f'front 10 elements = {out[0: 10]}')
         # else:
         #     print(f'========>m1 pass')
-
-        diff = calc_diff(out, ref_out)
 
         # noinspection PyShadowingNames
         def test_func():
