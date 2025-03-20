@@ -125,6 +125,8 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
         print(f' > Performance ({num_groups} groups, m={m_list}, n={n}, k={k}): {t * 1e6:.0f} us | '
               f'Throughput: {total_flops / t / 1e12:.1f} TFLOPS')
     print()
+    
+
 
 def test_m_grouped_gemm_dw_contiguous()->None:
     print('Testing grouped dw contiguous GEMM:')
