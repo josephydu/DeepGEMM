@@ -56,23 +56,18 @@ struct Scheduler {
         n_block_idx = first_n_block_idx + in_group_idx % num_n_blocks_in_group;
     }
 
-    template <bool kIgnoreGroupedForGroupedContiguous=false>
+    template <bool kIgnoreGroupedForGroupedContiguous=true>
     __device__ __forceinline__ uint32_t get_global_idx(const uint32_t shape_dim, const uint32_t block_size,
                                                        const uint32_t& block_idx, const uint32_t& m_block_idx=0) {
         if constexpr (kGemmType == GemmType::Normal) {
             return block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedContiguous) {
-            const int group_id = __ldg(grouped_layout + m_block_idx * BLOCK_M);
-            // 当shape_dim为0时，需要特殊处理分组偏移
-            const uint32_t group_offset = (shape_dim == 0) ? 
-                group_id * SHAPE_N * BLOCK_N :  // 使用SHAPE_N和BLOCK_N计算分组偏移
-                group_id * shape_dim;
-            return group_offset + block_idx * block_size;
+            auto offset = kIgnoreGroupedForGroupedContiguous ? 0 : __ldg(grouped_layout + m_block_idx * BLOCK_M);
+            return offset * shape_dim + block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedMasked) {
             return curr_group_idx * shape_dim + block_idx * block_size;
         }
     }
-    
 
 
 
