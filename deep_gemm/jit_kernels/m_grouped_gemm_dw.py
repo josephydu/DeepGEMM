@@ -94,6 +94,7 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
             m_indices, m, num_groups,
             torch.cuda.current_stream(), num_sms, smem_size)
     
+    
     print("lhs shape", lhs.shape)
     print("lhs_scales shape", lhs_scales.shape)
     print("rhs shape", rhs.shape)
