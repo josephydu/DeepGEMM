@@ -117,6 +117,7 @@ def test_m_grouped_gemm_dw_contiguous()->None:
             print(f'front 10 elements = {out[m: m + 10]}')
         else:
             print(f'========>m2 pass')
+            print(f'front 10 elements = {out[0: 10]}')
         diff = calc_diff(out[0:m], ref_out[0:m])
         if diff > 0.001:
             print(f'========>m1 fail, m1={m * num_groups}, {k=}, {n=}, {diff:.5f}')
