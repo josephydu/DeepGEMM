@@ -141,7 +141,9 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
     configs = [
         (4, [4096, 8192, 8192, 2048], 7168, 4096),  
         (3, [8192, 3072, 4096, ], 2048, 7168),  
-        (4, [8192, 8192, 8192, 8192], 7168, 4096)  
+        (4, [8192, 8192, 8192, 8192], 7168, 4096),
+        (8, [4096, 4096, 4096, 4096], 7168, 4096),
+        
     ]
     for num_groups, m_list, k, n in configs:
         x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked=False)
