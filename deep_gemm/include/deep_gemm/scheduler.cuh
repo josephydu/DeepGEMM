@@ -62,11 +62,18 @@ struct Scheduler {
         if constexpr (kGemmType == GemmType::Normal) {
             return block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedContiguous) {
-            const uint32_t group_id = __ldg(grouped_layout + m_block_idx * BLOCK_M);
-            return (group_id * shape_dim) + (block_idx * block_size);
+            auto offset = kIgnoreGroupedForGroupedContiguous ? 0 : __ldg(grouped_layout + m_block_idx * BLOCK_M);
+            return offset * shape_dim + block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedMasked) {
             return curr_group_idx * shape_dim + block_idx * block_size;
         }
+    }
+
+
+    template <bool kIgnoreGroupedForGroupedContiguous=true>
+    __device__ __forceinline__ uint32_t get_scable_b_global_idx(const uint32_t shape_dim, const uint32_t block_size,
+                                                       const uint32_t& block_idx, const uint32_t& m_block_idx=0) {
+                                    return NULL;
     }
 
     __device__ __forceinline__ bool get_next_block(uint32_t& m_block_idx, uint32_t& n_block_idx) {
