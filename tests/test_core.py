@@ -158,10 +158,16 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
             deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
 
         t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
+        
+        # num_groups * (m * k + k * n + m * n * 2)
+        
+        total_gb = 0
+        for m in m_list:
+            total_gb += m * k + k * n + m * n * 2
+        
         print(f' > Performance ({num_groups=}, m_list_per_group={m_list}, n={n:4}, k={k:4}): {t * 1e6:4.0f} us | '
               f'throughput: {2 * sum(m_list) * n * k / t / 1e12:4.0f} TFLOPS, '
-              f'{(sum(m_list) * (k + k * n + n * 2)) / 1e9 / t:4.0f} GB/s')
-        
+              f'{total_gb / 1e9 / t:4.0f} GB/s')
     print()
     
 
