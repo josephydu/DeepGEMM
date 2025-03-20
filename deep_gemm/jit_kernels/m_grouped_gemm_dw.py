@@ -63,6 +63,15 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
     m_, n_ = out.shape
     m__ = m_indices.numel()
 
+    print("lhs shape", lhs.shape)
+    print("lhs_scales shape", lhs_scales.shape)
+    print("rhs shape", rhs.shape)
+    print("rhs_scales shape", rhs_scales.shape)
+    print("out shape", out.shape)
+    print("m_indices shape", m_indices.shape)
+    print("m", m)
+    print("num_groups", num_groups)
+
     # Type and shape checks
     assert m == m_ == m__ and k == k_ and n == n_
     assert lhs_scales.shape == (m, (k + 127) // 128)
@@ -95,14 +104,7 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
             torch.cuda.current_stream(), num_sms, smem_size)
     
     
-    print("lhs shape", lhs.shape)
-    print("lhs_scales shape", lhs_scales.shape)
-    print("rhs shape", rhs.shape)
-    print("rhs_scales shape", rhs_scales.shape)
-    print("out shape", out.shape)
-    print("m_indices shape", m_indices.shape)
-    print("m", m)
-    print("num_groups", num_groups)
+
     
     runtime = jit_tuner.compile_and_tune(
         name='m_grouped_gemm_fp8_fp8_bf16_nt',
