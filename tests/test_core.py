@@ -93,7 +93,7 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
     )
     
     for i in range(num_groups):
-        x_fp8[0][i], x_fp8[1][i] = per_token_cast_to_fp8(x[i])  
+        x_fp8[0][i], x_fp8[1][i] = per_token_cast_to_fp8(x[m_list[i]])  
         y_fp8[0][i], y_fp8[1][i] = per_token_cast_to_fp8(y[i])  # NOTE: per-token
 
     if not is_masked:
