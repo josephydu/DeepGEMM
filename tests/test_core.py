@@ -99,7 +99,7 @@ def test_gemm_backward_w() -> None:
 def test_m_grouped_gemm_dw_contiguous()->None:
     print('Testing grouped contiguous GEMM:')
 
-    for num_groups, m, k, n in ((2, 8192, 7168, 4096),):
+    for num_groups, m, k, n in ((4, 8192, 7168, 4096), (4, 8192, 2048, 7168), (8, 4096, 7168, 4096), (8, 4096, 2048, 7168)):
     # for num_groups, m, k, n in ((2, 128, 128, 128),):
         # TODO: make a stronger test
         x_fp8, y_fp8, out, ref_out = construct_dw_grouped(num_groups, m, k, n, is_masked=False)
