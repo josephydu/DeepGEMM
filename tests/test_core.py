@@ -71,7 +71,7 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
 def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
     x = torch.cat([torch.randn((m, k), device='cuda', dtype=torch.bfloat16) for m in m_list], dim=0)
     y = torch.randn((num_groups, n, k), device='cuda', dtype=torch.bfloat16)
-    out = torch.empty((num_groups, sum(m_list), n), device='cuda', dtype=torch.bfloat16)
+    out = torch.empty((sum(m_list), n), device='cuda', dtype=torch.bfloat16)
     
     # calc ref_out first, ref out is varlen grouped
     ref_out = torch.zeros_like(out)
