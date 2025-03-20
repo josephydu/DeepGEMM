@@ -174,7 +174,7 @@ fp8_gemm_bw_kernel(__nv_bfloat16* gmem_d, float* scales_b, int* grouped_layout,
 
                         // Issue TMA B without broadcasting
                         tma_copy(&tensor_map_b, reinterpret_cast<uint64_t*>(&full_barrier),
-                                 smem_b[s], k_idx, scheduler.get_global_idx(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx));
+                                 smem_b[s], k_idx, scheduler.get_global_idx<false>(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx));
                         // Only support normal gemm now. @kavioyu
                         tma_copy(&tensor_map_scales_b, reinterpret_cast<uint64_t*>(&full_barrier),
                                  smem_scales_b[s], n_block_idx * BLOCK_N, scheduler.get_global_idx<false>(SHAPE_K_SCALES, 1, k_idx / BLOCK_K, m_block_idx));
