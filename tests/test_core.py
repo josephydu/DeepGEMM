@@ -95,9 +95,10 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
     
     seq_len = torch.Tensor([0] + m_list)
     cu_seq_len = torch.cumsum(seq_len, dim=0).to(torch.int32).to('cuda')
-    print(cu_seq_len)
+    print('x_fp8[1].shape', x_fp8[1].shape)
     for i in range(num_groups):
-        x_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]], x_fp8[1][cu_seq_len[i]:cu_seq_len[i + 1]] = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
+        o1, o2 = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
+        x_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]] = o1
         y_fp8[0][i], y_fp8[1][i] = per_token_cast_to_fp8(y[i])  # NOTE: per-token
 
     if not is_masked:
