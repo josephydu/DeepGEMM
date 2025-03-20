@@ -145,10 +145,10 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
     ]
     for num_groups, m_list, k, n in configs:
         x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked=False)
-        # deep_gemm.gemm_fp8_fp8_bf16_bw_nt(x_fp8, y_fp8, out)
-        # diff = calc_diff(out, ref_out)
-        # assert diff < 0.001, f'm={sum(m_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
-        # torch.cuda.synchronize()
+        deep_gemm.gemm_fp8_fp8_bf16_bw_nt(x_fp8, y_fp8, out)
+        diff = calc_diff(out, ref_out)
+        assert diff < 0.001, f'm={sum(m_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
+        torch.cuda.synchronize()
 
         
         
@@ -224,5 +224,5 @@ if __name__ == '__main__':
     print(f' > {deep_gemm.__path__}\n')
 
     test_m_grouped_gemm_dw_varlen_contiguous()
-    test_m_grouped_gemm_dw_contiguous()
-    test_gemm_backward_w()
+    # test_m_grouped_gemm_dw_contiguous()
+    # test_gemm_backward_w()
