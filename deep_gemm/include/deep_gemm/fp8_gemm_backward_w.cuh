@@ -177,14 +177,10 @@ fp8_gemm_bw_kernel(__nv_bfloat16* gmem_d, float* scales_b, int* grouped_layout,
                                  smem_b[s], 
                                  k_idx, 
                                  scheduler.get_global_idx<false>(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx));
-                        // 根据grouped_layout获取当前block所属的group
-                        const int group_id = __ldg(scheduler.grouped_layout + m_block_idx);
                         tma_copy(&tensor_map_scales_b, reinterpret_cast<uint64_t*>(&full_barrier),
                                  smem_scales_b[s], 
-                                 // 计算全局偏移：group_id * 每个group的列数 + n_block_idx
-                                 group_id * ceil_div(SHAPE_N, BLOCK_N) + n_block_idx,
-                                 // K维索引需要根据group进行调整
-                                 group_id * SHAPE_K_SCALES + (k_idx / BLOCK_K));
+                                 scheduler.get_global_idx<false>(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx),
+                                 scheduler.get_global_idx(SHAPE_K_SCALES, 1, k_idx / BLOCK_K,m_block_idx));
                         full_barrier.arrive_and_expect_tx(SMEM_A_SIZE_PER_STAGE + SMEM_B_SIZE_PER_STAGE + SMEM_SCALES_A_SIZE_PER_STAGE + SMEM_SCALES_B_SIZE_PER_STAGE);
                     }
 
@@ -417,14 +413,12 @@ public:
     static CUtensorMap make_2d_tma_scales_b_desc(T* global_address, uint32_t shape_m) {
         // Make TMA aligned to 16 bytes
         constexpr uint32_t kAlignment = 16 / sizeof(T);
-        constexpr uint32_t per_group_cols = ceil_div(SHAPE_N / kNumGroups, BLOCK_N);
-        constexpr uint32_t shape_n = per_group_cols * BLOCK_N * kNumGroups;  // 总列数 = 每个group的列数 * group数
+        constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
 
         return make_2d_tma_desc(global_address, Layout::ColMajor,
-            shape_n,  // 总列数包含所有group
-            ceil_div(SHAPE_K, BLOCK_K),  // 每个group的K维度
-            BLOCK_N, 1,
-            CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
+                                shape_n, 
+                                ceil_div(SHAPE_K, BLOCK_K) * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), BLOCK_N, 1,
+                                CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
     }
 
 
