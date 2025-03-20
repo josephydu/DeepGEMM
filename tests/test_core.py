@@ -74,10 +74,10 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
 
 def test_gemm_backward_w() -> None:
     print('Testing GEMM Backward W:')
-    # for m in (64, 128, 4096):
-        # for k, n in [(7168, 2112), (1536, 24576), (512, 32768), (16384, 7168), (7168, 4096), (2048, 7168)]:
-    for m in (4096, ):
-        for k, n in [(7168, 2112),]:
+    for m in (64, 128, 4096):
+        for k, n in [(7168, 2112), (1536, 24576), (512, 32768), (16384, 7168), (7168, 4096), (2048, 7168)]:
+    # for m in (4096, ):
+        # for k, n in [(7168, 2112),]:
             x_fp8, y_fp8, out, ref_out = construct_backward_w(m, k, n)
             deep_gemm.gemm_fp8_fp8_bf16_bw_nt(x_fp8, y_fp8, out)
             diff = calc_diff(out, ref_out)
@@ -105,7 +105,7 @@ def test_m_grouped_gemm_dw_contiguous()->None:
         x_fp8, y_fp8, out, ref_out = construct_dw_grouped(num_groups, m, k, n, is_masked=False)
         m_indices = torch.arange(0, num_groups, device='cuda', dtype=torch.int)
         m_indices = m_indices.unsqueeze(-1).expand(num_groups, m).contiguous().view(-1)
-        print('m_indices', m_indices)
+        # print('m_indices', m_indices)
         deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={m * num_groups}, {k=}, {n=}, {diff:.5f}'
