@@ -105,7 +105,7 @@ def test_m_grouped_gemm_dw_contiguous()->None:
         print('m_indices', m_indices)
         deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
         diff = calc_diff(out[0:m], ref_out[0:m])
-        diff = calc_diff(out[m:2 * m], out[m:2 * m])
+        diff = calc_diff(out[m:2 * m], ref_out[m:2 * m])
         # diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={m * num_groups}, {k=}, {n=}, {diff:.5f}'
 
