@@ -76,7 +76,7 @@ struct Scheduler {
         if constexpr (kGemmType == GemmType::Normal) {
             return block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedContiguous) {
-            const uint32_t group_id = __ldg(grouped_layout + m_block_idx);
+            const uint32_t group_id = __ldg(grouped_layout + m_block_idx * BLOCK_M);
             return group_id * shape_dim + block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedMasked) {
             return curr_group_idx * shape_dim + block_idx * block_size;
