@@ -48,7 +48,7 @@ fp8_gemm_bw_kernel(__nv_bfloat16* gmem_d, float* scales_b, int* grouped_layout,
     static constexpr uint32_t SMEM_B_SIZE_PER_STAGE = BLOCK_N * BLOCK_K * sizeof(__nv_fp8_e4m3);
     static constexpr uint32_t SMEM_SCALES_A_SIZE_PER_STAGE = BLOCK_M * sizeof(float);
     static constexpr uint32_t SMEM_SCALES_B_SIZE_PER_STAGE = ceil_div<uint32_t>(BLOCK_N * sizeof(float), sizeof(Barrier)) * sizeof(Barrier);
-    static constexpr uint32_t SHAPE_K_SCALES = ceil_div(SHAPE_K, BLOCK_K);
+    //static constexpr uint32_t SHAPE_K_SCALES = ceil_div(SHAPE_K, BLOCK_K);
     //static constexpr uint32_t SMEM_SCALES_B_SIZE = ceil_div<uint32_t>(SHAPE_K_SCALES * (kMustUseUniformedScaleB ? 1 : 2) * sizeof(float), sizeof(Barrier)) * sizeof(Barrier);
 
     // Configs
@@ -177,7 +177,7 @@ fp8_gemm_bw_kernel(__nv_bfloat16* gmem_d, float* scales_b, int* grouped_layout,
                                  smem_b[s], k_idx, scheduler.get_global_idx<false>(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx));
                         // Only support normal gemm now. @kavioyu
                         tma_copy(&tensor_map_scales_b, reinterpret_cast<uint64_t*>(&full_barrier),
-                                 smem_scales_b[s], n_block_idx * BLOCK_N, scheduler.get_global_idx<false>(SHAPE_N, 1, k_idx / BLOCK_K,m_block_idx));
+                                 smem_scales_b[s], n_block_idx * BLOCK_N, scheduler.get_global_idx(0, 1, k_idx / BLOCK_K));
                         full_barrier.arrive_and_expect_tx(SMEM_A_SIZE_PER_STAGE + SMEM_B_SIZE_PER_STAGE + SMEM_SCALES_A_SIZE_PER_STAGE + SMEM_SCALES_B_SIZE_PER_STAGE);
                     }
 
@@ -410,13 +410,10 @@ public:
     static CUtensorMap make_2d_tma_scales_b_desc(T* global_address, uint32_t shape_m) {
         // Make TMA aligned to 16 bytes
         constexpr uint32_t kAlignment = 16 / sizeof(T);
-        constexpr uint32_t per_group_shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
-        constexpr uint32_t total_shape_n = per_group_shape_n * kNumGroups;
+        constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
 
         return make_2d_tma_desc(global_address, Layout::ColMajor,
-                                total_shape_n, 
-                                ceil_div(SHAPE_K, BLOCK_K) * (kGemmType != GemmType::Normal ? kNumGroups : 1), 
-                                BLOCK_N, 1,
+                                shape_n, ceil_div(SHAPE_K, BLOCK_K) * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), BLOCK_N, 1,
                                 CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
     }
 
