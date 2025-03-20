@@ -412,9 +412,13 @@ public:
         constexpr uint32_t kAlignment = 16 / sizeof(T);
         constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
 
+        // 分组情况下每个group的K维度
+        constexpr uint32_t group_k = SHAPE_K / kNumGroups;
+        constexpr uint32_t scaled_group_k = ceil_div(group_k, BLOCK_K);
+
         return make_2d_tma_desc(global_address, Layout::ColMajor,
             shape_n,  
-            ceil_div(SHAPE_K, BLOCK_K) * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), 
+            scaled_group_k * kNumGroups,  // 总列数 = 每组K块数 × 组数
             BLOCK_N, 1,
             CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
     }
