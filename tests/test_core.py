@@ -145,7 +145,8 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
     ]
     for num_groups, m_list, k, n in configs:
         x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked=False)
-        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out)
+        m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(m_list)])
+        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out,m_indices)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={sum(m_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
         torch.cuda.synchronize()
@@ -166,7 +167,6 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
         # for i in range(num_groups):
         #     x_fp8[0][i], x_fp8[1][i] = per_token_cast_to_fp8(x[i])  
         #     y_fp8[0][i], y_fp8[1][i] = per_token_cast_to_fp8(y[i])  # NOTE: per-token
-        # m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(m_list)])
     
     print()
     
