@@ -62,9 +62,10 @@ struct Scheduler {
         if constexpr (kGemmType == GemmType::Normal) {
             return block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedContiguous) {
-            auto offset = kIgnoreGroupedForGroupedContiguous ? 0 : __ldg(grouped_layout + m_block_idx);
-            // auto offset = kIgnoreGroupedForGroupedContiguous ? 0 : __ldg(grouped_layout + m_block_idx * BLOCK_M);
-            return offset * shape_dim + block_idx * block_size;
+            const uint32_t group_id = __ldg(grouped_layout + m_block_idx);
+            // 计算每个group的偏移量: group_id * 每个group的列数
+            const uint32_t group_offset = group_id * (SHAPE_N / kNumGroups);
+            return group_offset + block_idx * block_size;
         } else if (kGemmType == GemmType::GroupedMasked) {
             return curr_group_idx * shape_dim + block_idx * block_size;
         }
