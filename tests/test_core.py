@@ -59,9 +59,7 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
             per_token_cast_to_fp8(x.view(-1, k))[1] 
         )
         
-        
         out = out.view(-1, n)
-        
         ref_out = ref_out.view(-1, n)
 
     x_fp8 = (x_fp8[0], get_col_major_tma_aligned_tensor(x_fp8[1]))
@@ -69,8 +67,46 @@ def construct_dw_grouped(num_groups: int, m: int, k: int, n: int, is_masked: boo
     
     return x_fp8, y_fp8, out, ref_out
     
+def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
+    x = torch.cat([torch.randn((m, k), device='cuda', dtype=torch.bfloat16) for m in m_list], dim=0)
+    y = torch.randn((num_groups, n, k), device='cuda', dtype=torch.bfloat16)
+    out = torch.empty((num_groups, sum(m_list), n), device='cuda', dtype=torch.bfloat16)
+    
+    # calc ref_out first, ref out is varlen grouped
+    ref_out = torch.zeros_like(out)
+    start_idx = 0
+    for i, m in enumerate(m_list):
+        x_part = x[start_idx:start_idx + m]
+        y_part = y[i]
+        ref_out[i, start_idx:start_idx + m] = x_part @ y_part.t()
+        start_idx += m
+        
+    assert sum(m_list) % 4 == 0, f'TMA alignment error: {m}'
+    
+    x_fp8 = (
+    torch.empty_like(x, dtype=torch.float8_e4m3fn),
+    torch.empty((num_groups, sum(m_list), k // 128), device='cuda', dtype=torch.float)
+    )
+    y_fp8 = (
+        torch.empty_like(y, dtype=torch.float8_e4m3fn),
+        torch.empty((num_groups, n, k // 128), device='cuda', dtype=torch.float) # NOTE: per-token
+    )
+    
+    for i in range(num_groups):
+        x_fp8[0][i], x_fp8[1][i] = per_token_cast_to_fp8(x[i])  
+        y_fp8[0][i], y_fp8[1][i] = per_token_cast_to_fp8(y[i])  # NOTE: per-token
 
-
+    if not is_masked:
+        x_fp8 = (
+            x_fp8[0].view(-1, k),
+            per_token_cast_to_fp8(x.view(-1, k))[1] 
+        )
+        out = out.view(-1, n)
+        ref_out = ref_out.view(-1, n)
+    x_fp8 = (x_fp8[0], get_col_major_tma_aligned_tensor(x_fp8[1]))
+    y_fp8 = (y_fp8[0], get_col_major_tma_aligned_tensor(y_fp8[1]))
+    
+    return x_fp8, y_fp8, out, ref_out
 
 def test_gemm_backward_w() -> None:
     print('Testing GEMM Backward W:')
@@ -104,26 +140,30 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
         (4, [1024, 2048, 3072, 4096], 512, 32768)  
     ]
     for num_groups, m_list, k, n in configs:
-        x = torch.cat([torch.randn((m, k), device='cuda', dtype=torch.bfloat16) for m in m_list], dim=0)
-        y = torch.randn((sum(m_list), k), device='cuda', dtype=torch.bfloat16)
-        out = torch.empty((sum(m_list), n), device='cuda', dtype=torch.bfloat16)
-        ref_out = x @ y.t()
-        x_fp8 = per_token_cast_to_fp8(x)
-        y_fp8 = per_token_cast_to_fp8(y)
-
-        m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(m_list)])
-        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
+        x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, m_list, k, n)
+        deep_gemm.gemm_fp8_fp8_bf16_bw_nt(x_fp8, y_fp8, out)
         diff = calc_diff(out, ref_out)
-        assert diff < 0.001, f'varlen grouped gemm failed with {diff:.5f}'
-        # 性能测试
-        def test_func():
-            x_fp8, y_fp8 = per_token_cast_to_fp8(x), per_token_cast_to_fp8(y)
-            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
-            
-        t = bench_kineto(test_func, 'fp8_gemm_varlen', suppress_kineto_output=True)
-        total_flops = 2 * sum(m * k * n for m in m_list)
-        print(f' > Performance ({num_groups} groups, m={m_list}, n={n}, k={k}): {t * 1e6:.0f} us | '
-              f'Throughput: {total_flops / t / 1e12:.1f} TFLOPS')
+        assert diff < 0.001, f'm={sum(m_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
+        torch.cuda.synchronize()
+
+        
+        
+
+
+        # x_fp8 = (
+        #     torch.empty_like(x, dtype=torch.float8_e4m3fn),
+        #     torch.empty((num_groups, m, k // 128), device='cuda', dtype=torch.float)
+        # )
+        # y_fp8 = (
+        #     torch.empty_like(y, dtype=torch.float8_e4m3fn),
+        #     torch.empty((num_groups, n, k // 128), device='cuda', dtype=torch.float) # NOTE: per-token
+        # )
+        
+        # for i in range(num_groups):
+        #     x_fp8[0][i], x_fp8[1][i] = per_token_cast_to_fp8(x[i])  
+        #     y_fp8[0][i], y_fp8[1][i] = per_token_cast_to_fp8(y[i])  # NOTE: per-token
+        # m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(m_list)])
+    
     print()
     
 
