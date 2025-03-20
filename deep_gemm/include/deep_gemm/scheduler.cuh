@@ -69,13 +69,6 @@ struct Scheduler {
         }
     }
 
-
-    template <bool kIgnoreGroupedForGroupedContiguous=true>
-    __device__ __forceinline__ uint32_t get_scable_b_global_idx(const uint32_t shape_dim, const uint32_t block_size,
-                                                       const uint32_t& block_idx, const uint32_t& m_block_idx=0) {
-        return 0;
-    }
-
     __device__ __forceinline__ bool get_next_block(uint32_t& m_block_idx, uint32_t& n_block_idx) {
         const auto next_block_idx = (++ current_iter) * gridDim.x + blockIdx.x;
 

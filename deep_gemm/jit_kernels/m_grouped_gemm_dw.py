@@ -66,7 +66,7 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
     # Type and shape checks
     assert m == m_ == m__ and k == k_ and n == n_
     assert lhs_scales.shape == (m, (k + 127) // 128)
-    assert rhs_scales.shape == (num_groups * n, (k + 127) // 128)
+    assert rhs_scales.shape == (num_groups , n, (k + 127) // 128)
     assert lhs.dtype == torch.float8_e4m3fn and lhs_scales.dtype == torch.float32
     assert rhs.dtype == torch.float8_e4m3fn and rhs_scales.dtype == torch.float32
     assert out.dtype == torch.bfloat16
