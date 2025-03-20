@@ -139,9 +139,9 @@ def test_gemm_backward_w() -> None:
 def test_m_grouped_gemm_dw_varlen_contiguous()->None:
     print('Testing grouped variable length contiguous GEMM:')
     configs = [
-        (2, [4096, 8192], 7168, 4096),  
-        (3, [2048, 3072, 4096], 2048, 7168),  
-        (4, [1024, 2048, 3072, 4096], 512, 32768)  
+        (2, [4096, 8192, 8192, 2048], 7168, 4096),  
+        (3, [8192, 3072, 4096, ], 2048, 7168),  
+        (4, [8192, 8192, 8192, 8192], 512, 32768)  
     ]
     for num_groups, m_list, k, n in configs:
         x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked=False)
