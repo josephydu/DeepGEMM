@@ -139,7 +139,7 @@ def test_gemm_backward_w() -> None:
 def test_m_grouped_gemm_dw_varlen_contiguous()->None:
     print('Testing grouped variable length contiguous GEMM:')
     configs = [
-        (2, [4096, 8192, 8192, 2048], 7168, 4096),  
+        (4, [4096, 8192, 8192, 2048], 7168, 4096),  
         (3, [8192, 3072, 4096, ], 2048, 7168),  
         (4, [8192, 8192, 8192, 8192], 512, 32768)  
     ]
