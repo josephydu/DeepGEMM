@@ -415,7 +415,7 @@ public:
         return make_2d_tma_desc(
             global_address, 
             Layout::ColMajor,
-            shape_n * (kGemmType != GemmType::Normal ? kNumGroups : 1),  // 每个group的scale_b在内存中连续存放
+            shape_n * (kGemmType != GemmType::Normal ? kNumGroups : 1), 
             ceil_div(SHAPE_K, BLOCK_K), 
             BLOCK_N, 
             1,
