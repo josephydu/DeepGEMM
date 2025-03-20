@@ -86,7 +86,7 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
     
     x_fp8 = (
     torch.empty_like(x, dtype=torch.float8_e4m3fn),
-    torch.empty((num_groups, sum(m_list), k // 128), device='cuda', dtype=torch.float)
+    torch.empty((sum(m_list), k // 128), device='cuda', dtype=torch.float)
     )
     y_fp8 = (
         torch.empty_like(y, dtype=torch.float8_e4m3fn),
@@ -97,8 +97,7 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
     cu_seq_len = torch.cumsum(seq_len, dim=0).to(torch.int32).to('cuda')
     print('x_fp8[1].shape', x_fp8[1].shape)
     for i in range(num_groups):
-        o1, o2 = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
-        x_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]] = o1
+        x_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]], x_fp8[1][cu_seq_len[i]:cu_seq_len[i + 1]] = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
         y_fp8[0][i], y_fp8[1][i] = per_token_cast_to_fp8(y[i])  # NOTE: per-token
 
     if not is_masked:
