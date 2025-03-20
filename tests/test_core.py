@@ -80,9 +80,9 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
         x_part = x[start_idx:start_idx + m]
         y_part = y[i]
         gemm = x_part @ y_part.t()
-        print('ref_out.shape', ref_out.shape)
-        print('gemm.shape', gemm.shape)
-        # ref_out[i, start_idx:start_idx + m] = 
+        # print('ref_out.shape', ref_out.shape)
+        # print('gemm.shape', gemm.shape)
+        ref_out[start_idx:start_idx + m] = gemm
         start_idx += m
         
     assert sum(m_list) % 4 == 0, f'TMA alignment error: {m}'
