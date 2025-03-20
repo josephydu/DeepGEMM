@@ -410,7 +410,7 @@ public:
     static CUtensorMap make_2d_tma_scales_b_desc(T* global_address, uint32_t shape_m) {
         // Make TMA aligned to 16 bytes
         constexpr uint32_t kAlignment = 16 / sizeof(T);
-        constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment;
+        constexpr uint32_t shape_n = ceil_div(SHAPE_N, kAlignment) * kAlignment * kNumGroups;
 
         return make_2d_tma_desc(global_address, Layout::ColMajor,
                                 shape_n, ceil_div(SHAPE_K, BLOCK_K) * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), BLOCK_N, 1,
