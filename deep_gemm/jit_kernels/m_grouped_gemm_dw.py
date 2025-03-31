@@ -22,7 +22,7 @@ using GemmType = GemmBW<N, K, BLOCK_M, BLOCK_N, 128, {NUM_GROUPS}, kNumStages, k
 
 // Launch kernel
 auto tma_a_desc = GemmType::make_2d_tma_a_desc(lhs, m);
-auto tma_b_desc = GemmType::make_2d_tma_b_desc(rhs, m);
+auto tma_b_desc = GemmType::make_2d_tma_b_desc(rhs);
 auto tma_scales_a_desc = GemmType::make_2d_tma_scales_a_desc(lhs_scales, m);
 auto tma_scales_b_desc = GemmType::make_2d_tma_scales_b_desc(rhs_scales, m);
 auto tma_d_desc = GemmType::make_2d_tma_d_desc(out, m);
@@ -35,7 +35,7 @@ GemmType::run(out, rhs_scales, grouped_layout,
 
 def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.Tensor],
                                               rhs: Tuple[torch.Tensor, torch.Tensor],
-                                              out: torch.Tensor, m_indices: torch.Tensor, num_groups:int) -> None:
+                                              out: torch.Tensor, m_indices: torch.Tensor) -> None:
     """
     Do a grouped GEMM (contiguous format) with FP8 inputs and BF16 output, with 1x128 LHS scaling and 128x128 RHS scaling.
     LHS, RHS, RHS scaling factors, and output tensors must be in contiguous format.
@@ -59,14 +59,14 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
     lhs, lhs_scales = lhs
     rhs, rhs_scales = rhs
     m, k = lhs.shape
-    n, k_ = rhs.shape
+    num_groups, n, k_ = rhs.shape
     m_, n_ = out.shape
     m__ = m_indices.numel()
 
     # Type and shape checks
     assert m == m_ == m__ and k == k_ and n == n_
     assert lhs_scales.shape == (m, (k + 127) // 128)
-    assert rhs_scales.shape == (n, (k + 127) // 128)
+    assert rhs_scales.shape == (num_groups , n, (k + 127) // 128)
     assert lhs.dtype == torch.float8_e4m3fn and lhs_scales.dtype == torch.float32
     assert rhs.dtype == torch.float8_e4m3fn and rhs_scales.dtype == torch.float32
     assert out.dtype == torch.bfloat16
