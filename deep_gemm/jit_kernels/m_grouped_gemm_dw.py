@@ -35,7 +35,7 @@ GemmType::run(out, rhs_scales, grouped_layout,
 
 def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.Tensor],
                                               rhs: Tuple[torch.Tensor, torch.Tensor],
-                                              out: torch.Tensor, m_indices: torch.Tensor) -> None:
+                                              out: torch.Tensor, m_indices: torch.Tensor, num_groups) -> None:
     """
     Do a grouped GEMM (contiguous format) with FP8 inputs and BF16 output, with 1x128 LHS scaling and 128x128 RHS scaling.
     LHS, RHS, RHS scaling factors, and output tensors must be in contiguous format.
