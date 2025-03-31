@@ -167,6 +167,7 @@ def construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked):
         x_part = x[start_idx:start_idx + group]
         y_part = y[start_idx:start_idx + group]
         gemm = x_part @ y_part.t()
+        print(gemm.shape)
         ref_out[start_idx:start_idx + group] = gemm
         start_idx += group
         
