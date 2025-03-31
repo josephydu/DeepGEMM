@@ -389,7 +389,7 @@ public:
 
     template <typename T>
     static CUtensorMap make_2d_tma_d_desc(T* global_address, uint32_t shape_m) {
-        return make_2d_tma_desc(global_address, Layout::RowMajor,
+        return make_2d_tma_desc(global_address, Layout::ColMajor,
                                 shape_m * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), SHAPE_N,
                                 min(BLOCK_M, shape_m), BLOCK_N,
                                 CUtensorMapSwizzle::CU_TENSOR_MAP_SWIZZLE_NONE);
