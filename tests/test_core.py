@@ -162,7 +162,7 @@ def construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked):
     print(x.shape, y.shape)
     out = torch.empty((sum(groups_list), sum(groups_list)), device='cuda', dtype=torch.bfloat16)
     
-    print('ref_out.shape:', ref_out.shape)
+    print('out.shape:', out.shape)
     # calc ref_out first, ref out is varlen grouped
     ref_out = torch.zeros_like(out)
     start_idx = 0
