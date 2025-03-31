@@ -154,6 +154,46 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
     
     return x_fp8, y_fp8, out, ref_out
 
+
+def construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked):
+    x = torch.cat([torch.randn((m, k), device='cuda', dtype=torch.bfloat16) for m in groups_list], dim=0)
+    y = torch.cat([torch.randn((n, k), device='cuda', dtype=torch.bfloat16) for n in groups_list], dim=0)
+    out = torch.empty((sum(groups_list), sum(groups_list)), device='cuda', dtype=torch.bfloat16)
+    
+    # calc ref_out first, ref out is varlen grouped
+    ref_out = torch.zeros_like(out)
+    start_idx = 0
+    for i, group in enumerate(groups_list):
+        x_part = x[start_idx:start_idx + group]
+        y_part = y[start_idx:start_idx + group]
+        gemm = x_part @ y_part.t()
+        ref_out[start_idx:start_idx + group] = gemm
+        start_idx += group
+        
+    assert sum(groups_list) % 4 == 0, f'TMA alignment error: {groups_list}'
+    
+    x_fp8 = (
+    torch.empty_like(x, dtype=torch.float8_e4m3fn),
+    torch.empty((sum(groups_list), k // 128), device='cuda', dtype=torch.float)
+    )
+    y_fp8 = (
+    torch.empty_like(y, dtype=torch.float8_e4m3fn),
+    torch.empty((sum(groups_list), k // 128), device='cuda', dtype=torch.float)
+    )
+    
+    seq_len = torch.Tensor([0] + groups_list)
+    cu_seq_len = torch.cumsum(seq_len, dim=0).to(torch.int32).to('cuda')
+    for i in range(num_groups):
+        x_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]], x_fp8[1][cu_seq_len[i]:cu_seq_len[i + 1]] = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
+        y_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]], y_fp8[1][cu_seq_len[i]:cu_seq_len[i + 1]] = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
+
+    x_fp8 = (x_fp8[0], get_col_major_tma_aligned_tensor(x_fp8[1]))
+    y_fp8 = (y_fp8[0], get_col_major_tma_aligned_tensor(y_fp8[1]))
+    
+    return x_fp8, y_fp8, out, ref_out
+
+
+
 def test_gemm_backward_w() -> None:
     print('Testing GEMM Backward W:')
     for m in (64, 128, 4096):
@@ -211,6 +251,45 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
         
         print(f' > Performance ({num_groups=}, m_list_per_group={m_list}, n={n:4}, k={k:4}): {t * 1e6:4.0f} us | '
               f'throughput: {2 * sum(m_list) * n * k / t / 1e12:4.0f} TFLOPS, '
+              f'{total_gb / 1e9 / t:4.0f} GB/s')
+    print()
+
+
+
+def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
+    print('Testing grouped variable length for x and y contiguous GEMM:')
+    configs = [
+        (4, [4096, 8192, 8192, 2048], 7168),  
+        (3, [8192, 3072, 4096, ], 2048),  
+        (4, [8192, 8192, 8192, 8192], 7168),
+        (8, [4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096], 7168),
+        
+    ]
+    # NOTE: m_list must be the same as n_list
+    for num_groups, groups_list, k in configs:
+        x_fp8, y_fp8, out, ref_out = construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked=False)
+        m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(groups_list)])
+        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out,m_indices)
+        diff = calc_diff(out, ref_out)
+        assert diff < 0.001, f'm={sum(groups_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
+        torch.cuda.synchronize()
+
+        def test_func():
+            # Construct new tensors every time to avoid L2 cache acceleration
+            x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, groups_list, k, n, is_masked=False)
+            m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(groups_list)])
+            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
+
+        t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
+        
+        # num_groups * (m * k + k * n + m * n * 2)
+        
+        total_gb = 0
+        for m in groups_list:
+            total_gb += m * k + k * n + m * n * 2
+        
+        print(f' > Performance ({num_groups=}, m_list_per_group={groups_list}, n={n:4}, k={k:4}): {t * 1e6:4.0f} us | '
+              f'throughput: {2 * sum(groups_list) * n * k / t / 1e12:4.0f} TFLOPS, '
               f'{total_gb / 1e9 / t:4.0f} GB/s')
     print()
 
@@ -329,10 +408,10 @@ if __name__ == '__main__':
 
     print('Library path:')
     print(f' > {deep_gemm.__path__}\n')
-
-    test_m_grouped_gemm_dw_varlen_contiguous()
-    test_m_grouped_gemm_dw_contiguous()
-    test_gemm_backward_w()
-    test_gemm()
-    test_m_grouped_gemm_contiguous()
-    test_m_grouped_gemm_masked()
+    test_m_grouped_gemm_dw_varlen_xy_contiguous()
+    # test_m_grouped_gemm_dw_varlen_contiguous()
+    # test_m_grouped_gemm_dw_contiguous()
+    # test_gemm_backward_w()
+    # test_gemm()
+    # test_m_grouped_gemm_contiguous()
+    # test_m_grouped_gemm_masked()
