@@ -385,7 +385,7 @@ public:
 
     template <typename T>
     static CUtensorMap make_2d_tma_b_desc(T* global_address) {
-        return make_2d_tma_desc(global_address, Layout::ColMajor,
+        return make_2d_tma_desc(global_address, Layout::RowMajor,
                                 SHAPE_K, SHAPE_N * (kGemmType != GemmType::Normal ? kNumGroups : 1), BLOCK_K, BLOCK_N);
     }
 
