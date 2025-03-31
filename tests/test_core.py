@@ -412,8 +412,8 @@ if __name__ == '__main__':
 
     print('Library path:')
     print(f' > {deep_gemm.__path__}\n')
-    test_m_grouped_gemm_dw_varlen_contiguous()
     test_m_grouped_gemm_dw_varlen_xy_contiguous()
+    # test_m_grouped_gemm_dw_varlen_contiguous()
     # test_m_grouped_gemm_dw_contiguous()
     # test_gemm_backward_w()
     # test_gemm()
