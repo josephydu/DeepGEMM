@@ -269,7 +269,7 @@ def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
     for num_groups, groups_list, k in configs:
         x_fp8, y_fp8, out, ref_out = construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked=False)
         m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(groups_list)])
-        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out,m_indices)
+        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out,m_indices,num_groups)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={sum(groups_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
         torch.cuda.synchronize()
@@ -278,7 +278,7 @@ def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
             # Construct new tensors every time to avoid L2 cache acceleration
             x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, groups_list, k, n, is_masked=False)
             m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(groups_list)])
-            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices)
+            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices,num_groups)
 
         t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
         
