@@ -139,6 +139,7 @@ def bench_kineto(fn, kernel_names, num_tests: int = 30, suppress_kineto_output: 
 
 def calc_diff(x, y):
     x, y = x.double(), y.double()
+    x * x
     denominator = (x * x + y * y).sum()
     sim = 2 * (x * y).sum() / denominator
     return 1 - sim

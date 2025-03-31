@@ -169,12 +169,12 @@ def construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked):
     for i, group in enumerate(groups_list):
         x_part = x[start_idx:start_idx + group]
         y_part = y[start_idx:start_idx + group]
-        print('x_part.shape:', x_part.shape, 'y_part.shape:', y_part.shape)
         gemm = x_part @ y_part.t()
         ref_out[start_idx:start_idx + group, start_idx:start_idx + group] = gemm
         start_idx += group
         
     assert sum(groups_list) % 4 == 0, f'TMA alignment error: {groups_list}'
+    
     
     x_fp8 = (
     torch.empty_like(x, dtype=torch.float8_e4m3fn),
