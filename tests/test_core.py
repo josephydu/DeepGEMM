@@ -156,21 +156,18 @@ def construct_dw_varlen_grouped(num_groups, m_list, k, n, is_masked):
 
 
 def construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked):
-    print(groups_list)
     x = torch.cat([torch.randn((m, k), device='cuda', dtype=torch.bfloat16) for m in groups_list], dim=0)
     y = torch.cat([torch.randn((n, k), device='cuda', dtype=torch.bfloat16) for n in groups_list], dim=0)
     out = torch.empty((sum(groups_list), sum(groups_list)), device='cuda', dtype=torch.bfloat16)
     
     # calc ref_out first, ref out is varlen grouped
     ref_out = torch.zeros_like(out)
-    print(ref_out.shape)    
     start_idx = 0
     for i, group in enumerate(groups_list):
         x_part = x[start_idx:start_idx + group]
         y_part = y[start_idx:start_idx + group]
         gemm = x_part @ y_part.t()
-        print(gemm.shape)
-        ref_out[start_idx:start_idx + group] = gemm
+        ref_out[start_idx:start_idx + group, start_idx:start_idx + group] = gemm
         start_idx += group
         
     assert sum(groups_list) % 4 == 0, f'TMA alignment error: {groups_list}'
