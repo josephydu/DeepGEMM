@@ -273,7 +273,7 @@ def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
     for num_groups, groups_list, k in configs:
         x_fp8, y_fp8, out, ref_out = construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked=False)
         m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(groups_list)])
-        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out,m_indices,num_groups)
+        deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out,m_indices,1)
         diff = calc_diff(out, ref_out)
         assert diff < 0.001, f'm={sum(groups_list) * num_groups}, {k=}, {diff:.5f}'
         torch.cuda.synchronize()
@@ -282,7 +282,7 @@ def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
             # Construct new tensors every time to avoid L2 cache acceleration
             x_fp8, y_fp8, out, ref_out = construct_dw_varlen_grouped(num_groups, groups_list, k, n, is_masked=False)
             m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(groups_list)])
-            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices,num_groups)
+            deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out, m_indices,1)
 
         t = bench_kineto(test_func, 'fp8_gemm', suppress_kineto_output=True)
         
@@ -290,10 +290,10 @@ def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
         
         total_gb = 0
         for m in groups_list:
-            total_gb += m * k + k * n + m * n * 2
+            total_gb += m * k + k * m + m * m * 2
         
-        print(f' > Performance ({num_groups=}, m_list_per_group={groups_list}, n={n:4}, k={k:4}): {t * 1e6:4.0f} us | '
-              f'throughput: {2 * sum(groups_list) * n * k / t / 1e12:4.0f} TFLOPS, '
+        print(f' > Performance ({num_groups=}, m_list_per_group={groups_list}, n={m:4}, k={k:4}): {t * 1e6:4.0f} us | '
+              f'throughput: {2 * sum(groups_list) * m * k / t / 1e12:4.0f} TFLOPS, '
               f'{total_gb / 1e9 / t:4.0f} GB/s')
     print()
 
