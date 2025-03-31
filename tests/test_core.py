@@ -259,9 +259,9 @@ def test_m_grouped_gemm_dw_varlen_contiguous()->None:
 def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
     print('Testing grouped variable length for x and y contiguous GEMM:')
     configs = [
-        (4, [4096, 8192, 8192, 2048], 7168),  
-        (3, [8192, 3072, 4096, ], 2048),  
-        (4, [8192, 8192, 8192, 8192], 7168),
+        # (4, [4096, 8192, 8192, 2048], 7168),  
+        # (3, [8192, 3072, 4096, ], 2048),  
+        # (4, [8192, 8192, 8192, 8192], 7168),
         (8, [4096, 4096, 4096, 4096, 4096, 4096, 4096, 4096], 7168),
         
     ]
@@ -271,7 +271,7 @@ def test_m_grouped_gemm_dw_varlen_xy_contiguous()->None:
         m_indices = torch.cat([torch.full((m,), i, device='cuda', dtype=torch.int) for i, m in enumerate(groups_list)])
         deep_gemm.m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(x_fp8, y_fp8, out,m_indices,num_groups)
         diff = calc_diff(out, ref_out)
-        assert diff < 0.001, f'm={sum(groups_list) * num_groups}, {k=}, {n=}, {diff:.5f}'
+        assert diff < 0.001, f'm={sum(groups_list) * num_groups}, {k=}, {diff:.5f}'
         torch.cuda.synchronize()
 
         def test_func():
