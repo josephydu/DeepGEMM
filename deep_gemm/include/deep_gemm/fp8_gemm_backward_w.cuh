@@ -174,10 +174,10 @@ fp8_gemm_bw_kernel(__nv_bfloat16* gmem_d, float* scales_b, int* grouped_layout,
 
                         // Issue TMA B without broadcasting
                         tma_copy(&tensor_map_b, reinterpret_cast<uint64_t*>(&full_barrier),
-                                 smem_b[s], k_idx, scheduler.get_global_idx(shape_m, BLOCK_M, m_block_idx));
+                                 smem_b[s], k_idx, scheduler.get_global_idx<false>(SHAPE_N, BLOCK_N, n_block_idx, m_block_idx));
                         // Only support normal gemm now. @kavioyu
                         tma_copy(&tensor_map_scales_b, reinterpret_cast<uint64_t*>(&full_barrier),
-                                 smem_scales_b[s], n_block_idx * BLOCK_N, scheduler.get_global_idx<false>(0, 1, k_idx / BLOCK_K));
+                                 smem_scales_b[s], n_block_idx * BLOCK_N, scheduler.get_global_idx<false>(ceil_div(SHAPE_K, BLOCK_K), 1, k_idx / BLOCK_K, m_block_idx));
                         full_barrier.arrive_and_expect_tx(SMEM_A_SIZE_PER_STAGE + SMEM_B_SIZE_PER_STAGE + SMEM_SCALES_A_SIZE_PER_STAGE + SMEM_SCALES_B_SIZE_PER_STAGE);
                     }
 
@@ -382,9 +382,9 @@ public:
     }
 
     template <typename T>
-    static CUtensorMap make_2d_tma_b_desc(T* global_address, uint32_t shape_m) {
-        return make_2d_tma_desc(global_address, Layout::RowMajor,
-                                shape_m * (kGemmType == GemmType::GroupedMasked ? kNumGroups : 1), SHAPE_K, BLOCK_M, BLOCK_K);
+    static CUtensorMap make_2d_tma_b_desc(T* global_address) {
+        return make_2d_tma_desc(global_address, Layout::ColMajor,
+                                SHAPE_K, SHAPE_N * (kGemmType != GemmType::Normal ? kNumGroups : 1), BLOCK_K, BLOCK_N);
     }
 
     template <typename T>
