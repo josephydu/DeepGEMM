@@ -63,7 +63,6 @@ def m_grouped_gemm_dw_fp8_fp8_bf16_nt_contiguous(lhs: Tuple[torch.Tensor, torch.
     m_, n_ = out.shape
     m__ = m_indices.numel()
     
-    print(m, k, n, m_, n_, num_groups)
 
     # Type and shape checks
     assert m == m_ == m__ and k == k_ and n == n_
