@@ -185,7 +185,7 @@ def construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked):
     cu_seq_len = torch.cumsum(seq_len, dim=0).to(torch.int32).to('cuda')
     for i in range(num_groups):
         x_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]], x_fp8[1][cu_seq_len[i]:cu_seq_len[i + 1]] = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
-        y_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]], y_fp8[1][cu_seq_len[i]:cu_seq_len[i + 1]] = per_token_cast_to_fp8(x[cu_seq_len[i]:cu_seq_len[i + 1]])
+        y_fp8[0][cu_seq_len[i]:cu_seq_len[i + 1]], y_fp8[1][cu_seq_len[i]:cu_seq_len[i + 1]] = per_token_cast_to_fp8(y[cu_seq_len[i]:cu_seq_len[i + 1]])
 
     x_fp8 = (x_fp8[0], get_col_major_tma_aligned_tensor(x_fp8[1]))
     y_fp8 = (y_fp8[0], get_col_major_tma_aligned_tensor(y_fp8[1]))
