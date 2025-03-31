@@ -163,6 +163,7 @@ def construct_dw_varlen_xy_grouped(num_groups, groups_list, k, is_masked):
     
     # calc ref_out first, ref out is varlen grouped
     ref_out = torch.zeros_like(out)
+    print(ref_out.shape)    
     start_idx = 0
     for i, group in enumerate(groups_list):
         x_part = x[start_idx:start_idx + group]
