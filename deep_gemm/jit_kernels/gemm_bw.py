@@ -27,7 +27,7 @@ using GemmType = GemmBW<N, K, BLOCK_M, BLOCK_N, 128, 1, kNumStages, kNumTMAMulti
 
 // Launch kernel
 auto tma_a_desc = GemmType::make_2d_tma_a_desc(lhs, m);
-auto tma_b_desc = GemmType::make_2d_tma_b_desc(rhs, m);
+auto tma_b_desc = GemmType::make_2d_tma_b_desc(rhs);
 auto tma_scales_a_desc = GemmType::make_2d_tma_scales_a_desc(lhs_scales, m);
 auto tma_scales_b_desc = GemmType::make_2d_tma_scales_b_desc(rhs_scales, m);
 auto tma_d_desc = GemmType::make_2d_tma_d_desc(out, m);
